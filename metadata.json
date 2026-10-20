@@ -1,0 +1,6 @@
+{
+  "name": "Laskar Decorators",
+  "description": "Interactive 3D Showroom, Virtual Event Spaces, Booking & WhatsApp Catalog for Laskar Tent Gift Mike House and Decorators in Mohanpur, Hailakandi, Assam.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
