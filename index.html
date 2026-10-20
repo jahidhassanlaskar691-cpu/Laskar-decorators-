@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Laskar Decorators 3D Showroom</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0d0a14;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #ffffff;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        /* HUD & Controls */
+        .hud-overlay {
+            position: absolute;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 12px;
+        }
+        .top-controls {
+            pointer-events: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .space-badge {
+            background: rgba(26, 18, 38, 0.85);
+            border: 1px solid rgba(229, 168, 35, 0.4);
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #f7d377;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #e5a823;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #e5a823;
+            animation: pulse-dot 1.8s infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.6; }
+        }
+        .quick-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .btn-icon {
+            background: rgba(26, 18, 38, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+        }
+        .btn-icon:active {
+            transform: scale(0.92);
+            background: #e5a823;
+            color: #120e18;
+        }
+        .btn-icon.active {
+            border-color: #e5a823;
+            background: rgba(229, 168, 35, 0.25);
+            color: #f7d377;
+        }
+
+        /* Bottom Floating Bar */
+        .bottom-controls {
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+        }
+        .spaces-scroll {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            max-width: 100%;
+            padding: 4px 2px;
+            scrollbar-width: none;
+        }
+        .spaces-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .space-chip {
+            background: rgba(22, 16, 32, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            color: #e0d8eb;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            backdrop-filter: blur(6px);
+        }
+        .space-chip.active {
+            background: linear-gradient(135deg, #b8860b, #e5a823);
+            color: #0e0a14;
+            font-weight: 700;
+            border-color: #ffd700;
+            box-shadow: 0 4px 14px rgba(229, 168, 35, 0.45);
+        }
+
+        .camera-presets {
+            display: flex;
+            background: rgba(18, 14, 24, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 3px;
+            gap: 4px;
+            backdrop-filter: blur(8px);
+        }
+        .cam-btn {
+            background: transparent;
+            border: none;
+            color: #b0a6c0;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 14px;
+            cursor: pointer;
+        }
+        .cam-btn.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+
+        /* Hotspot popup card on 3D view */
+        .hotspot-card {
+            pointer-events: auto;
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            opacity: 0;
+            visibility: hidden;
+            width: calc(100% - 32px);
+            max-width: 380px;
+            background: rgba(22, 16, 32, 0.94);
+            border: 1px solid #e5a823;
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7), 0 0 15px rgba(229,168,35,0.2);
+            backdrop-filter: blur(12px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100;
+        }
+        .hotspot-card.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        .hotspot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+        .hotspot-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f7d377;
+        }
+        .hotspot-close {
+            background: none;
+            border: none;
+            color: #a094b8;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 2px 6px;
+        }
+        .hotspot-category {
+            display: inline-block;
+            background: rgba(229, 168, 35, 0.2);
+            color: #f7d377;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .hotspot-desc {
+            font-size: 12px;
+            color: #d1c8de;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+        .hotspot-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hotspot-price {
+            font-size: 15px;
+            font-weight: 700;
+            color: #4ade80;
+        }
+        .hotspot-btn {
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);
+        }
+
+        /* 3D Hint */
+        .drag-hint {
+            position: absolute;
+            top: 54px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.5);
+            border-radius: 12px;
+            padding: 4px 12px;
+            font-size: 11px;
+            color: #c9c1d6;
+            pointer-events: none;
+            opacity: 0.85;
+            transition: opacity 1s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="hud-overlay">
+        <div class="top-controls">
+            <div class="space-badge" id="space-badge">
+                <span class="badge-dot"></span>
+                <span id="space-title">Royal Wedding Shamiana</span>
+            </div>
+            <div class="quick-actions">
+                <button class="btn-icon" id="btn-light" title="Toggle Day/Night">🌙</button>
+                <button class="btn-icon" id="btn-reset" title="Reset Camera">🎯</button>
+            </div>
+        </div>
+
+        <div class="drag-hint" id="drag-hint">👆 Drag to rotate 360° • Pinch to zoom</div>
+
+        <div class="bottom-controls">
+            <div class="spaces-scroll">
+                <button class="space-chip active" onclick="switchSpace('wedding')">👑 Royal Shamiana</button>
+                <button class="space-chip" onclick="switchSpace('mike_dj')">🔊 DJ & Mike House</button>
+                <button class="space-chip" onclick="switchSpace('reception')">✨ Fairy Garden Lawn</button>
+                <button class="space-chip" onclick="switchSpace('gift_shop')">🎁 Gifts & Crockery</button>
+            </div>
+            <div class="camera-presets">
+                <button class="cam-btn active" onclick="setCamPreset('overview')">Overview</button>
+                <button class="cam-btn" onclick="setCamPreset('stage')">Stage Dais</button>
+                <button class="cam-btn" onclick="setCamPreset('walkin')">Walk In</button>
+                <button class="cam-btn" onclick="setCamPreset('drone')">Top View</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hotspot popup modal card -->
+    <div class="hotspot-card" id="hotspot-card">
+        <div class="hotspot-header">
+            <div>
+                <span class="hotspot-category" id="modal-category">Decoration</span>
+                <h3 class="hotspot-title" id="modal-title">Royal Mandap & Floral Arch</h3>
+            </div>
+            <button class="hotspot-close" onclick="closeHotspotCard()">✕</button>
+        </div>
+        <p class="hotspot-desc" id="modal-desc">Handcrafted carved pillars with royal red draping, fresh marigold and rose garlands, crystal chandeliers, and couple dais.</p>
+        <div class="hotspot-footer">
+            <div class="hotspot-price" id="modal-price">₹35,000 - ₹65,000</div>
+            <button class="hotspot-btn" id="modal-btn-wa" onclick="bookCurrentHotspot()">
+                <span>WhatsApp</span> 💬
+            </button>
+        </div>
+    </div>
+
+    <script src="three.min.js"></script>
+    <script src="OrbitControls.js"></script>
+    <script>
+        // State variables
+        let scene, camera, renderer, controls;
+        let activeSpace = 'wedding';
+        let isNight = true;
+        let ambientLight, dirLight, mainPointLight;
+        let spaceGroup;
+        let hotspots = [];
+        let particles;
+        let currentSelectedHotspot = null;
+
+        const container = document.getElementById('canvas-container');
+
+        // Space definitions and Hotspots data
+        const SPACES_DATA = {
+            wedding: {
+                title: "Royal Wedding Shamiana",
+                badge: "Royal Wedding Shamiana",
+                groundColor: 0x221319,
+                tentPrimary: 0x8b1028, // Crimson royal red
+                tentSecondary: 0xd4af37, // Gold accent
+                camPos: { x: 0, y: 8, z: 22 },
+                lookAt: { x: 0, y: 3, z: 0 },
+                hotspots: [
+                    {
+                        id: "mandap_arch",
+                        title: "Royal Floral Mandap & Stage",
+                        category: "Wedding Decor",
+                        pos: { x: 0, y: 4.2, z: -7 },
+                        price: "₹35,000 - ₹65,000",
+                        desc: "Grand carved wedding stage with royal red drapes, LED profile lighting, floral archway, and deluxe couple chairs.",
+                        image: "img_6_1732114728754_c2314361.jpg"
+                    },
+                    {
+                        id: "shamiana_canopy",
+                        title: "Luxury Scalloped Tent & Drapes",
+                        category: "Tent Structure",
+                        pos: { x: -6, y: 7.5, z: 0 },
+                        price: "₹25,000 - ₹50,000",
+                        desc: "Weatherproof luxury shamiana with pleated satin ceiling fabric, golden scalloped borders, and heavy-duty frame pipes.",
+                        image: "img_5_1732023677261_f4db4e91.jpg"
+                    },
+                    {
+                        id: "chandelier_lights",
+                        title: "Crystal Chandeliers & Fairy Strings",
+                        category: "Lighting & Ambience",
+                        pos: { x: 0, y: 8.5, z: 0 },
+                        price: "₹12,000 - ₹25,000",
+                        desc: "Warm ambient crystal chandelier centerpieces with cascading warm-white rice fairy lights spanning the entire canopy.",
+                        image: "img_9_1732114746782_1069b27c.jpg"
+                    },
+                    {
+                        id: "vip_seating",
+                        title: "VIP Velvet Sofa & Banquet Chairs",
+                        category: "Seating Setup",
+                        pos: { x: 5, y: 1.8, z: 3 },
+                        price: "₹15,000 - ₹30,000",
+                        desc: "Royal Maharaja couple sofa set, 150+ covered banquet chairs with matching organza chair bows and round dining tables.",
+                        image: "IMG_20230301_185635_08ee2896.jpg"
+                    }
+                ]
+            },
+            mike_dj: {
+                title: "DJ & Grand Mike House",
+                badge: "DJ & Mike Sound Setup",
+                groundColor: 0x0f1118,
+                tentPrimary: 0x1a2130, // Deep slate
+                tentSecondary: 0x00d2ff, // Electric cyan
+                camPos: { x: 0, y: 7, z: 20 },
+                lookAt: { x: 0, y: 3, z: 0 },
+                hotspots: [
+                    {
+                        id: "line_array",
+                        title: "Dual Line-Array Tower Speakers",
+                        category: "Sound & Mike",
+                        pos: { x: -6.5, y: 4.5, z: -4 },
+                        price: "₹18,000 - ₹40,000",
+                        desc: "Dual high-power line-array acoustic tops with heavy bass scoop subwoofers for crystal-clear coverage up to 3,000+ people.",
+                        image: "null-20260920-WA0000_13266a9d.jpg"
+                    },
+                    {
+                        id: "dj_console",
+                        title: "DJ Mixer, Console & Mike Setup",
+                        category: "Sound House",
+                        pos: { x: 0, y: 2.5, z: -3 },
+                        price: "₹8,000 - ₹18,000",
+                        desc: "Pioneer DJ deck setup with high-gain UHF wireless cordless mikes, vocal processors, and backup generator connectivity.",
+                        image: "null-20260920-WA0011_9cb66ad0.jpg"
+                    },
+                    {
+                        id: "stage_lighting",
+                        title: "Moving Head Sharpy & RGB Truss",
+                        category: "Stage Lighting",
+                        pos: { x: 4.5, y: 7.2, z: -4 },
+                        price: "₹14,000 - ₹28,000",
+                        desc: "High-power beam moving heads, RGB LED par cans, laser beam effects, and heavy fog smoke machines.",
+                        image: "IMG_20230509_224932_11cd1bcc.jpg"
+                    }
+                ]
+            },
+            reception: {
+                title: "Fairy Garden Reception Lawn",
+                badge: "Open-Air Lawn & Pandal",
+                groundColor: 0x122415,
+                tentPrimary: 0x415b3c,
+                tentSecondary: 0xffd98e,
+                camPos: { x: -3, y: 9, z: 24 },
+                lookAt: { x: 0, y: 3, z: 0 },
+                hotspots: [
+                    {
+                        id: "hanging_lights_canopy",
+                        title: "Starlight Fairy Drop Canopy",
+                        category: "Outdoor Lighting",
+                        pos: { x: 0, y: 8, z: 0 },
+                        price: "₹15,000 - ₹32,000",
+                        desc: "Thousands of warm fairy micro-LEDs creating a magical glowing night ceiling over the banquet lawn.",
+                        image: "20250308_222258_0762eb08.jpg"
+                    },
+                    {
+                        id: "entrance_archway",
+                        title: "Botanical Entrance Welcome Arch",
+                        category: "Welcome Gate",
+                        pos: { x: 0, y: 4.5, z: 10 },
+                        price: "₹10,000 - ₹22,000",
+                        desc: "Lush botanical eucalyptus and rose welcome gate with illuminated acrylic nameplate and carpet walkway.",
+                        image: "Aura_dream_walk_51fc4848.jpeg"
+                    },
+                    {
+                        id: "buffet_setup",
+                        title: "Banquet Dining & Buffet Pandals",
+                        category: "Catering Tent",
+                        pos: { x: 7, y: 3, z: -2 },
+                        price: "₹20,000 - ₹45,000",
+                        desc: "Long stainless-steel chafing counter tent with sneeze guards, decorated food stalls, and water dispenser stations.",
+                        image: "round-plastic-printed-plates_d6ce67cb.jpg"
+                    }
+                ]
+            },
+            gift_shop: {
+                title: "Laskar Gift House & Crockery",
+                badge: "Gift Shop & Return Favors",
+                groundColor: 0x241d24,
+                tentPrimary: 0x5a2d6b,
+                tentSecondary: 0xf5b041,
+                camPos: { x: 0, y: 6, z: 18 },
+                lookAt: { x: 0, y: 2.5, z: 0 },
+                hotspots: [
+                    {
+                        id: "return_gifts",
+                        title: "Party & Wedding Return Favors",
+                        category: "Gifts Center",
+                        pos: { x: -4.5, y: 3, z: -2 },
+                        price: "₹150 - ₹1,500 / piece",
+                        desc: "Customized gift boxes, fashionable bags, decorative baskets, and celebratory souvenir gifts for guests.",
+                        image: "hypra-women-bag_e7c7de46.jpg"
+                    },
+                    {
+                        id: "umbrellas_corner",
+                        title: "Designer Umbrellas & Kids Corner",
+                        category: "Novelty Gifts",
+                        pos: { x: 4.5, y: 3.2, z: -2 },
+                        price: "₹250 - ₹650 / piece",
+                        desc: "Reverse C-handle umbrellas, 3-fold floral umbrellas, Spiderman school bags, and cute stationery sets.",
+                        image: "kids-reverse-umbrella-500x500_86c657ba.jpg"
+                    },
+                    {
+                        id: "crockery_display",
+                        title: "Luxury Melamine & Kitchenware",
+                        category: "Diningware",
+                        pos: { x: 0, y: 2.5, z: 2 },
+                        price: "₹450 - ₹3,500 / set",
+                        desc: "Heavy-duty melamine printed dinner plates, stainless spoons, serving bowls, and catering utensils.",
+                        image: "Kitchen_Ware_01f4b2b7.jpeg"
+                    }
+                ]
+            }
+        };
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0d0a14, 0.022);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 8, 22);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.1;
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05; // Don't go below ground
+            controls.minDistance = 6;
+            controls.maxDistance = 35;
+            controls.target.set(0, 3, 0);
+
+            // Lighting
+            ambientLight = new THREE.AmbientLight(0x282038, 1.4);
+            scene.add(ambientLight);
+
+            dirLight = new THREE.DirectionalLight(0xffecc4, 1.2);
+            dirLight.position.set(10, 20, 15);
+            scene.add(dirLight);
+
+            mainPointLight = new THREE.PointLight(0xffb732, 2.5, 30);
+            mainPointLight.position.set(0, 7.5, 0);
+            scene.add(mainPointLight);
+
+            // Group for space geometry
+            spaceGroup = new THREE.Group();
+            scene.add(spaceGroup);
+
+            // Floating festive particles
+            createFestiveParticles();
+
+            // Build initial space
+            loadSpace('wedding');
+
+            // Events
+            window.addEventListener('resize', onWindowResize);
+            renderer.domElement.addEventListener('pointerdown', onPointerDown);
+
+            // Setup buttons
+            document.getElementById('btn-light').addEventListener('click', toggleLighting);
+            document.getElementById('btn-reset').addEventListener('click', () => setCamPreset('overview'));
+
+            // Auto dismiss hint after 4s
+            setTimeout(() => {
+                const hint = document.getElementById('drag-hint');
+                if (hint) hint.style.opacity = '0';
+            }, 4500);
+
+            // Animation Loop
+            animate();
+        }
+
+        function createFestiveParticles() {
+            const particleCount = 180;
+            const geom = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 32;
+                positions[i * 3 + 1] = Math.random() * 12 + 0.5;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 32;
+            }
+            geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const mat = new THREE.PointsMaterial({
+                color: 0xffd700,
+                size: 0.18,
+                transparent: true,
+                opacity: 0.65,
+                blending: THREE.AdditiveBlending
+            });
+
+            particles = new THREE.Points(geom, mat);
+            scene.add(particles);
+        }
+
+        function clearSpace() {
+            // Remove existing meshes from spaceGroup
+            while (spaceGroup.children.length > 0) {
+                const obj = spaceGroup.children[0];
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                    else obj.material.dispose();
+                }
+                spaceGroup.remove(obj);
+            }
+            hotspots = [];
+            closeHotspotCard();
+        }
+
+        function loadSpace(spaceKey) {
+            clearSpace();
+            activeSpace = spaceKey;
+            const data = SPACES_DATA[spaceKey];
+
+            // Update UI Title
+            document.getElementById('space-title').innerText = data.title;
+
+            // Ground Floor
+            const groundGeom = new THREE.CircleGeometry(16, 32);
+            const groundMat = new THREE.MeshStandardMaterial({
+                color: data.groundColor,
+                roughness: 0.7,
+                metalness: 0.1
+            });
+            const ground = new THREE.Mesh(groundGeom, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            spaceGroup.add(ground);
+
+            // Carpet Runner
+            const carpetGeom = new THREE.PlaneGeometry(3.6, 22);
+            const carpetMat = new THREE.MeshStandardMaterial({
+                color: 0x9e122b,
+                roughness: 0.8
+            });
+            const carpet = new THREE.Mesh(carpetGeom, carpetMat);
+            carpet.rotation.x = -Math.PI / 2;
+            carpet.position.set(0, 0.02, 1);
+            spaceGroup.add(carpet);
+
+            // Space-specific 3D Architecture
+            if (spaceKey === 'wedding') {
+                buildWeddingTent(data);
+            } else if (spaceKey === 'mike_dj') {
+                buildDjSoundSpace(data);
+            } else if (spaceKey === 'reception') {
+                buildGardenLawn(data);
+            } else if (spaceKey === 'gift_shop') {
+                buildGiftShop(data);
+            }
+
+            // Create Hotspot Billboard Markers
+            data.hotspots.forEach(hs => {
+                createHotspotMarker(hs);
+            });
+
+            // Camera transition
+            animateCameraTo(data.camPos, data.lookAt);
+        }
+
+        // --- Space 1: Royal Wedding Tent ---
+        function buildWeddingTent(data) {
+            // 4 Pillars / Steel Truss Poles
+            const poleGeom = new THREE.CylinderGeometry(0.18, 0.22, 9, 16);
+            const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.85, roughness: 0.25 });
+            const redClothMat = new THREE.MeshStandardMaterial({ color: 0x800020, roughness: 0.65 });
+
+            const polePositions = [
+                [-8, 4.5, -8], [8, 4.5, -8],
+                [-8, 4.5, 8], [8, 4.5, 8]
+            ];
+
+            polePositions.forEach(p => {
+                const pole = new THREE.Mesh(poleGeom, goldMat);
+                pole.position.set(p[0], p[1], p[2]);
+                spaceGroup.add(pole);
+
+                // Pole fabric draping spiral
+                const drapeGeom = new THREE.CylinderGeometry(0.24, 0.26, 8.8, 12);
+                const drape = new THREE.Mesh(drapeGeom, redClothMat);
+                drape.position.set(p[0], p[1], p[2]);
+                spaceGroup.add(drape);
+            });
+
+            // High Canopy Pitched Roof
+            const roofGeom = new THREE.ConeGeometry(13.5, 5.5, 4, 1, false, Math.PI / 4);
+            const roofMat = new THREE.MeshStandardMaterial({
+                color: 0x8b1028,
+                roughness: 0.5,
+                side: THREE.DoubleSide
+            });
+            const roof = new THREE.Mesh(roofGeom, roofMat);
+            roof.position.set(0, 10.5, 0);
+            spaceGroup.add(roof);
+
+            // Gold Trim on Roof edges
+            const rimGeom = new THREE.TorusGeometry(9.2, 0.12, 8, 4);
+            const rim = new THREE.Mesh(rimGeom, goldMat);
+            rim.rotation.x = Math.PI / 2;
+            rim.rotation.z = Math.PI / 4;
+            rim.position.set(0, 8.2, 0);
+            spaceGroup.add(rim);
+
+            // Elevated Stage Dais at Back
+            const stageGeom = new THREE.BoxGeometry(10, 0.8, 6);
+            const stageMat = new THREE.MeshStandardMaterial({ color: 0x3d0b16, roughness: 0.5 });
+            const stage = new THREE.Mesh(stageGeom, stageMat);
+            stage.position.set(0, 0.4, -6.5);
+            spaceGroup.add(stage);
+
+            // Mandap Arch on Stage
+            const archCurve = new THREE.TorusGeometry(3.5, 0.25, 12, 24, Math.PI);
+            const floralArch = new THREE.Mesh(archCurve, new THREE.MeshStandardMaterial({ color: 0xff3366, roughness: 0.8 }));
+            floralArch.position.set(0, 4.2, -7.5);
+            spaceGroup.add(floralArch);
+
+            // Inner Arch Gold Accent
+            const innerArch = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.12, 8, 20, Math.PI), goldMat);
+            innerArch.position.set(0, 4.2, -7.4);
+            spaceGroup.add(innerArch);
+
+            // Stage Backdrop Wall
+            const backWallGeom = new THREE.PlaneGeometry(11, 7);
+            const backWallMat = new THREE.MeshStandardMaterial({ color: 0xf5eedb, roughness: 0.9, side: THREE.DoubleSide });
+            const backWall = new THREE.Mesh(backWallGeom, backWallMat);
+            backWall.position.set(0, 4.3, -9);
+            spaceGroup.add(backWall);
+
+            // Couple Sofa Dais
+            const sofaBaseGeom = new THREE.BoxGeometry(2.8, 0.6, 1.2);
+            const sofaMat = new THREE.MeshStandardMaterial({ color: 0xfff6e6, roughness: 0.4 });
+            const sofa = new THREE.Mesh(sofaBaseGeom, sofaMat);
+            sofa.position.set(0, 1.1, -6.5);
+            spaceGroup.add(sofa);
+
+            // Sofa Backrest
+            const backrestGeom = new THREE.BoxGeometry(2.8, 1.0, 0.35);
+            const backrest = new THREE.Mesh(backrestGeom, sofaMat);
+            backrest.position.set(0, 1.8, -7.0);
+            spaceGroup.add(backrest);
+
+            // Chandelier in Center Ceiling
+            const chGeom = new THREE.OctahedronGeometry(0.8, 2);
+            const chMat = new THREE.MeshStandardMaterial({ color: 0xfff0aa, metalness: 0.9, roughness: 0.1 });
+            const chandelier = new THREE.Mesh(chGeom, chMat);
+            chandelier.position.set(0, 7.8, 0);
+            spaceGroup.add(chandelier);
+
+            // Hanging Crystal Beads Drops
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const dropGeom = new THREE.CylinderGeometry(0.02, 0.04, 1.2, 6);
+                const drop = new THREE.Mesh(dropGeom, goldMat);
+                drop.position.set(Math.cos(angle) * 0.9, 7.2, Math.sin(angle) * 0.9);
+                spaceGroup.add(drop);
+            }
+
+            // Guest Banquet Tables (Round)
+            const tablePositions = [[-4, 0, 2], [4, 0, 2], [-5, 0, -2], [5, 0, -2]];
+            tablePositions.forEach(tp => {
+                const tableGeom = new THREE.CylinderGeometry(1.2, 1.2, 1.1, 16);
+                const tableMat = new THREE.MeshStandardMaterial({ color: 0xeadcc2 });
+                const table = new THREE.Mesh(tableGeom, tableMat);
+                table.position.set(tp[0], 0.55, tp[2]);
+                spaceGroup.add(table);
+
+                // Small centerpiece floral bowl
+                const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), new THREE.MeshStandardMaterial({ color: 0xe63946 }));
+                bowl.position.set(tp[0], 1.2, tp[2]);
+                spaceGroup.add(bowl);
+            });
+        }
+
+        // --- Space 2: DJ & Mike House ---
+        function buildDjSoundSpace(data) {
+            // Stage Truss System (Aluminum Silver)
+            const trussMat = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, metalness: 0.85, roughness: 0.3 });
+
+            // Truss Archway Frame
+            const beamTop = new THREE.Mesh(new THREE.BoxGeometry(14, 0.35, 0.35), trussMat);
+            beamTop.position.set(0, 7.5, -4);
+            spaceGroup.add(beamTop);
+
+            const beamLeft = new THREE.Mesh(new THREE.BoxGeometry(0.35, 7.5, 0.35), trussMat);
+            beamLeft.position.set(-7, 3.75, -4);
+            spaceGroup.add(beamLeft);
+
+            const beamRight = new THREE.Mesh(new THREE.BoxGeometry(0.35, 7.5, 0.35), trussMat);
+            beamRight.position.set(7, 3.75, -4);
+            spaceGroup.add(beamRight);
+
+            // Left & Right Dual Line-Array Speaker Stacks
+            const speakerMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 });
+            const coneMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.3 });
+
+            [-6.2, 6.2].forEach(x => {
+                // Heavy Double Bass Bin Subwoofer
+                const subBox = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.6, 1.8), speakerMat);
+                subBox.position.set(x, 0.8, -4);
+                spaceGroup.add(subBox);
+
+                // Subwoofer grill cones
+                [-0.45, 0.45].forEach(cx => {
+                    const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.05, 16), coneMat);
+                    cone.rotation.x = Math.PI / 2;
+                    cone.position.set(x + cx, 0.8, -3.05);
+                    spaceGroup.add(cone);
+                });
+
+                // Line Array Tops Stack (3 curved modules)
+                for (let i = 0; i < 3; i++) {
+                    const topBox = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.65, 1.2), speakerMat);
+                    topBox.position.set(x, 2.0 + i * 0.75, -4);
+                    topBox.rotation.x = 0.06 * i; // Slight angle curvature
+                    spaceGroup.add(topBox);
+                }
+            });
+
+            // DJ Performance Console Dais
+            const djStage = new THREE.Mesh(new THREE.BoxGeometry(6, 0.7, 4), new THREE.MeshStandardMaterial({ color: 0x1a1a24 }));
+            djStage.position.set(0, 0.35, -4);
+            spaceGroup.add(djStage);
+
+            // DJ Booth Table with LED Front
+            const djTable = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.2, 1.0), new THREE.MeshStandardMaterial({ color: 0x050505 }));
+            djTable.position.set(0, 1.3, -3.5);
+            spaceGroup.add(djTable);
+
+            // DJ Table LED display glow
+            const ledScreen = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.9), new THREE.MeshBasicMaterial({ color: 0x00d2ff }));
+            ledScreen.position.set(0, 1.3, -2.98);
+            spaceGroup.add(ledScreen);
+
+            // Microphone Boom Stands
+            [-1.8, 1.8].forEach(mx => {
+                const micBase = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 12), speakerMat);
+                micBase.position.set(mx, 0.72, -2.5);
+                spaceGroup.add(micBase);
+
+                const micPole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 8), trussMat);
+                micPole.position.set(mx, 1.5, -2.5);
+                spaceGroup.add(micPole);
+
+                const micHead = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), coneMat);
+                micHead.position.set(mx, 2.3, -2.5);
+                spaceGroup.add(micHead);
+            });
+
+            // Hanging Moving Lights on Top Truss
+            [-4, -1.5, 1.5, 4].forEach((lx, idx) => {
+                const lightBody = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.4, 12), speakerMat);
+                lightBody.position.set(lx, 7.1, -4);
+                spaceGroup.add(lightBody);
+
+                // Light Spot cone visual
+                const coneLight = new THREE.Mesh(
+                    new THREE.ConeGeometry(1.2, 6, 16, 1, true),
+                    new THREE.MeshBasicMaterial({
+                        color: idx % 2 === 0 ? 0x00f0ff : 0xff0077,
+                        transparent: true,
+                        opacity: 0.25,
+                        side: THREE.DoubleSide
+                    })
+                );
+                coneLight.position.set(lx, 4.0, -2.8);
+                coneLight.rotation.x = -0.3;
+                spaceGroup.add(coneLight);
+            });
+        }
+
+        // --- Space 3: Garden Lawn ---
+        function buildGardenLawn(data) {
+            // Fairy Light Canopy Strings
+            const stringCount = 12;
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xffe899, transparent: true, opacity: 0.6 });
+
+            for (let i = 0; i < stringCount; i++) {
+                const angle = (i / stringCount) * Math.PI * 2;
+                const points = [
+                    new THREE.Vector3(0, 8.5, 0),
+                    new THREE.Vector3(Math.cos(angle) * 7, 7.0, Math.sin(angle) * 7),
+                    new THREE.Vector3(Math.cos(angle) * 11, 4.5, Math.sin(angle) * 11)
+                ];
+                const curve = new THREE.CatmullRomCurve3(points);
+                const geom = new THREE.BufferGeometry().setFromPoints(curve.getPoints(20));
+                const line = new THREE.Line(geom, lineMat);
+                spaceGroup.add(line);
+            }
+
+            // Center Light Pole
+            const centerPole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 9, 12), new THREE.MeshStandardMaterial({ color: 0x3d3020 }));
+            centerPole.position.set(0, 4.5, 0);
+            spaceGroup.add(centerPole);
+
+            // Glowing Fairy Orb on top
+            const orb = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshBasicMaterial({ color: 0xfff6c2 }));
+            orb.position.set(0, 8.6, 0);
+            spaceGroup.add(orb);
+
+            // Botanical Gate at Entrance
+            const gateMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.8 });
+            const gateArch = new THREE.Mesh(new THREE.TorusGeometry(3.0, 0.35, 12, 24, Math.PI), gateMat);
+            gateArch.position.set(0, 4.0, 10);
+            spaceGroup.add(gateArch);
+
+            // Buffet Table Pavilion
+            const buffetTent = new THREE.Mesh(new THREE.BoxGeometry(8, 0.2, 3), new THREE.MeshStandardMaterial({ color: 0x800020 }));
+            buffetTent.position.set(7, 3.8, -2);
+            spaceGroup.add(buffetTent);
+
+            const buffetTable = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.9, 1.8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            buffetTable.position.set(7, 0.45, -2);
+            spaceGroup.add(buffetTable);
+        }
+
+        // --- Space 4: Gift Shop & Crockery ---
+        function buildGiftShop(data) {
+            // Modern boutique gift display shelving
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a2e18, roughness: 0.6 });
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, transparent: true, opacity: 0.5 });
+
+            // Wall display racks
+            [-5, 5].forEach(x => {
+                const rack = new THREE.Mesh(new THREE.BoxGeometry(1.2, 5.5, 5.0), woodMat);
+                rack.position.set(x, 2.75, -2);
+                spaceGroup.add(rack);
+
+                // Shelves
+                for (let s = 1; s <= 3; s++) {
+                    const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 4.8), glassMat);
+                    shelf.position.set(x, s * 1.3, -2);
+                    spaceGroup.add(shelf);
+                }
+            });
+
+            // Gift Boxes on Shelves
+            const boxColors = [0xe63946, 0x457b9d, 0x2a9d8f, 0xe76f51, 0xd4af37];
+            for (let i = 0; i < 8; i++) {
+                const bMat = new THREE.MeshStandardMaterial({ color: boxColors[i % boxColors.length], roughness: 0.4 });
+                const box = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.45), bMat);
+                box.position.set(i < 4 ? -5 : 5, 1.6 + (i % 3) * 1.2, -3.5 + (i % 3) * 1.4);
+                spaceGroup.add(box);
+            }
+
+            // Center Island Table for Luxury Crockery
+            const centerTable = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 1.0, 24), new THREE.MeshStandardMaterial({ color: 0xf5f0eb, roughness: 0.3 }));
+            centerTable.position.set(0, 0.5, 2);
+            spaceGroup.add(centerTable);
+
+            // Crockery Plates visual
+            for (let p = 0; p < 5; p++) {
+                const angle = (p / 5) * Math.PI * 2;
+                const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.35, 0.06, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.2 }));
+                plate.position.set(Math.cos(angle) * 1.4, 1.05, 2 + Math.sin(angle) * 1.4);
+                spaceGroup.add(plate);
+            }
+        }
+
+        // --- 3D Interactive Hotspot Markers ---
+        function createHotspotMarker(hsData) {
+            const group = new THREE.Group();
+            group.position.set(hsData.pos.x, hsData.pos.y, hsData.pos.z);
+
+            // Glowing Outer Ring
+            const ringGeom = new THREE.RingGeometry(0.38, 0.52, 24);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0xffd700,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.85
+            });
+            const ring = new THREE.Mesh(ringGeom, ringMat);
+            group.add(ring);
+
+            // Inner Pulsing Core
+            const coreGeom = new THREE.CircleGeometry(0.3, 20);
+            const coreMat = new THREE.MeshBasicMaterial({
+                color: 0xff5533,
+                side: THREE.DoubleSide
+            });
+            const core = new THREE.Mesh(coreGeom, coreMat);
+            core.position.z = 0.01;
+            group.add(core);
+
+            // White Center Pin
+            const pinGeom = new THREE.CircleGeometry(0.12, 16);
+            const pinMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+            const pin = new THREE.Mesh(pinGeom, pinMat);
+            pin.position.z = 0.02;
+            group.add(pin);
+
+            // Hover hitbox (invisible sphere for easy tap precision)
+            const hitGeom = new THREE.SphereGeometry(0.9, 8, 8);
+            const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+            const hitbox = new THREE.Mesh(hitGeom, hitMat);
+            hitbox.userData = { isHotspot: true, data: hsData, group: group };
+            group.add(hitbox);
+
+            spaceGroup.add(group);
+            hotspots.push({ group, ring, core, data: hsData });
+        }
+
+        // Pointer / Touch Tap detection on 3D Hotspots
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+
+        function onPointerDown(event) {
+            pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(pointer, camera);
+            const intersects = raycaster.intersectObjects(spaceGroup.children, true);
+
+            for (let i = 0; i < intersects.length; i++) {
+                if (intersects[i].object.userData && intersects[i].object.userData.isHotspot) {
+                    const hsData = intersects[i].object.userData.data;
+                    selectHotspot(hsData);
+                    break;
+                }
+            }
+        }
+
+        function selectHotspot(hsData) {
+            currentSelectedHotspot = hsData;
+
+            // Smoothly ease camera to look closer at the hotspot
+            const targetPos = new THREE.Vector3(hsData.pos.x, hsData.pos.y, hsData.pos.z);
+            const camTarget = new THREE.Vector3(
+                hsData.pos.x + (camera.position.x > hsData.pos.x ? 3.5 : -3.5),
+                hsData.pos.y + 1.5,
+                hsData.pos.z + 5.5
+            );
+            animateCameraTo(camTarget, targetPos);
+
+            // Populate and show the card
+            document.getElementById('modal-title').innerText = hsData.title;
+            document.getElementById('modal-category').innerText = hsData.category;
+            document.getElementById('modal-desc').innerText = hsData.desc;
+            document.getElementById('modal-price').innerText = hsData.price;
+
+            const card = document.getElementById('hotspot-card');
+            card.classList.add('visible');
+
+            // Send notification to Native Android Compose Bridge
+            if (window.AndroidBridge && window.AndroidBridge.onHotspotSelected) {
+                window.AndroidBridge.onHotspotSelected(JSON.stringify(hsData));
+            }
+        }
+
+        function closeHotspotCard() {
+            document.getElementById('hotspot-card').classList.remove('visible');
+            currentSelectedHotspot = null;
+        }
+
+        function bookCurrentHotspot() {
+            if (!currentSelectedHotspot) return;
+            if (window.AndroidBridge && window.AndroidBridge.onBookHotspot) {
+                window.AndroidBridge.onBookHotspot(JSON.stringify(currentSelectedHotspot));
+            } else {
+                // Fallback web WhatsApp URL
+                const msg = encodeURIComponent("Hello Laskar Tent & Decorators, I am interested in booking: " + currentSelectedHotspot.title + " (" + currentSelectedHotspot.price + "). Please share availability and details.");
+                window.open("https://wa.me/919707847234?text=" + msg, '_blank');
+            }
+        }
+
+        function switchSpace(spaceKey) {
+            // Update Chip active state
+            const chips = document.querySelectorAll('.space-chip');
+            chips.forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+
+            loadSpace(spaceKey);
+        }
+
+        function setCamPreset(preset) {
+            const btns = document.querySelectorAll('.cam-btn');
+            btns.forEach(b => b.classList.remove('active'));
+            if (event && event.target) event.target.classList.add('active');
+
+            const data = SPACES_DATA[activeSpace];
+            if (preset === 'overview') {
+                animateCameraTo(data.camPos, data.lookAt);
+            } else if (preset === 'stage') {
+                animateCameraTo({ x: 0, y: 3.5, z: -1 }, { x: 0, y: 3.5, z: -8 });
+            } else if (preset === 'walkin') {
+                animateCameraTo({ x: 0, y: 1.8, z: 12 }, { x: 0, y: 2.2, z: 0 });
+            } else if (preset === 'drone') {
+                animateCameraTo({ x: 0, y: 24, z: 2 }, { x: 0, y: 0, z: 0 });
+            }
+        }
+
+        function toggleLighting() {
+            isNight = !isNight;
+            const btn = document.getElementById('btn-light');
+            if (isNight) {
+                btn.innerText = "🌙";
+                btn.classList.remove('active');
+                scene.background = new THREE.Color(0x0d0a14);
+                scene.fog.color = new THREE.Color(0x0d0a14);
+                ambientLight.color.setHex(0x282038);
+                ambientLight.intensity = 1.4;
+                dirLight.intensity = 0.8;
+                mainPointLight.intensity = 2.8;
+            } else {
+                btn.innerText = "☀️";
+                btn.classList.add('active');
+                scene.background = new THREE.Color(0x221a2c);
+                scene.fog.color = new THREE.Color(0x221a2c);
+                ambientLight.color.setHex(0x6b5c7b);
+                ambientLight.intensity = 2.2;
+                dirLight.intensity = 2.0;
+                mainPointLight.intensity = 1.5;
+            }
+        }
+
+        // Camera Smooth Lerp Transition
+        let camTargetPos = null;
+        let controlsTargetPos = null;
+
+        function animateCameraTo(targetEye, targetLook) {
+            camTargetPos = new THREE.Vector3(targetEye.x, targetEye.y, targetEye.z);
+            controlsTargetPos = new THREE.Vector3(targetLook.x, targetLook.y, targetLook.z);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Hotspots Billboard facing camera & pulse
+            const time = performance.now() * 0.003;
+            hotspots.forEach((hs, idx) => {
+                hs.group.quaternion.copy(camera.quaternion);
+                const s = 1.0 + Math.sin(time * 2.5 + idx) * 0.15;
+                hs.ring.scale.set(s, s, s);
+            });
+
+            // Camera animation lerp
+            if (camTargetPos) {
+                camera.position.lerp(camTargetPos, 0.06);
+                if (camera.position.distanceTo(camTargetPos) < 0.08) camTargetPos = null;
+            }
+            if (controlsTargetPos) {
+                controls.target.lerp(controlsTargetPos, 0.06);
+                if (controls.target.distanceTo(controlsTargetPos) < 0.08) controlsTargetPos = null;
+            }
+
+            // Floating particles drift
+            if (particles) {
+                particles.rotation.y += 0.0008;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Initial launch
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
